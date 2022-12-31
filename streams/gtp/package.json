@@ -1,8 +1,8 @@
 {
-  "name": "sabaki-go",
+  "name": "tenuki",
   "version": "1.0.0",
   "description": "",
-  "main": "sabaki-go.js",
+  "main": "tenuki.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
