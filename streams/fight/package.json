@@ -1,0 +1,16 @@
+{
+  "name": "tenuki",
+  "version": "1.0.0",
+  "description": "",
+  "main": "tenuki.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sabaki/go-board": "^1.4.3",
+    "@sabaki/influence": "^1.2.2"
+  }
+}
