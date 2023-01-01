@@ -9,10 +9,10 @@ let side = 1;
 // clear/create new board
 function initBoard() {
   return new Board([
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 1,-1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 1, 0, 1, 1,-1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1,-1,-1,-1],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46,16 +46,16 @@ function estimateTerritory(heatmap) {
 // evaluate liberties
 function evaluateLiberties(side, liberties, surround) {
   let bestCount = 0;
-  let bestLiberty = liberties[0];//(surround == 1 ? liberties[0] : [-1, -1]);
+  let bestLiberty = (surround == 1 ? liberties[0] : [-1, -1]);
   for (let i = 0; i < liberties.length; i++) {
     // store current board state
     let takeBack = board.clone();
     
-    // make move
+    // test move
     board = board.makeMove(side, liberties[i]);
-    
-    // find best liberty
     let count = board.getLiberties(liberties[i]).length;
+    board = takeBack;
+    
     if (count > bestCount) {
       if (liberties[i][0] == 0 || 
           liberties[i][0] == board.width-1 ||
@@ -66,9 +66,6 @@ function evaluateLiberties(side, liberties, surround) {
       bestLiberty = liberties[i];
       bestCount = count;
     }
-
-    // take back
-    board = takeBack;
   } return bestLiberty;
 }
 
@@ -124,9 +121,20 @@ function attack(side) {
   for (let row = 0; row < board.height; row++) {
     for (let col = 0; col < board.width; col++) {
       let stone = board.get([col, row]);
-      if (stone != side) {
+      if (side == 1 ? (stone == -1) : (stone == 1)) {
         let liberties = board.getLiberties([col, row]);
-        if (liberties.length > 1) return evaluateLiberties(side, liberties, 1);
+        if (liberties.length > 1) {
+          let move = evaluateLiberties(side, liberties, 1);
+          let takeBack = board.clone();
+          let isLegal = true;
+          
+          // legality check
+          board = board.makeMove(side, move);
+          if (board.get(move) == 0) isLegal = false;
+          board = takeBack;
+          if (isLegal == false) continue;
+          return move;
+        }
       }
     }
   } return bestMove;
@@ -145,20 +153,16 @@ function tenuki(side) {
         // store current board state
         let takeBack = board.clone();
         
-        // make move
+        // test move
         board = board.makeMove(side, [col, row]);
-        
-        // estimate territory
         heatmap = influence.map(board.signMap, {discrete: true});
         let score = estimateTerritory(heatmap);
+        board = takeBack;
         
         if (side == 1 ? (score > bestScore) : (score < bestScore)) {
           bestScore = score;
           bestMove = [col, row];
         }
-
-        // take back
-        board = takeBack;
       }
     }
   }
@@ -206,10 +210,10 @@ function generateMove(command) {
   let attackMove = attack(side);
 
   // tenuki move
-  let tenukiMove = tenuki(side);
+  //let tenukiMove = tenuki(side);
   
   if (attackMove[0] >= 0) bestMove = attackMove;
-  else bestMove = tenukiMove;
+  //else bestMove = tenukiMove;
 
   //console.error('Save move:', saveMove);
   //console.error('Defend move:', defendMove);
@@ -224,8 +228,8 @@ function generateMove(command) {
 
 // play move on board
 function play(command) {
+  //if (command.split(' ')[2] == 'pass') { console.error('play: "pass" > returning...'); return; }
   let side = command.split(' ')[1];
-  if (side == 'pass') return;
   let color = side == 'B' ? 1 : -1;
   let coord = board.parseVertex(command.split(' ')[2]);
   board = board.makeMove(color, coord);  
