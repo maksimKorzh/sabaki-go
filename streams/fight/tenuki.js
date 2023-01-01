@@ -71,7 +71,6 @@ function evaluateLiberties(side, liberties, surround) {
 
 // generate capture move
 function capture(side) {
-  let bestMove = [-1, -1];
   for (let row = 0; row < board.height; row++) {
     for (let col = 0; col < board.width; col++) {
       let stone = board.get([col, row]);
@@ -80,12 +79,11 @@ function capture(side) {
         if (liberties.length == 1) return liberties[0];
       }
     }
-  }
+  } return [-1, -1];
 }
 
 // generate save move
 function save(side) {
-  let bestMove = [-1, -1];
   for (let row = 0; row < board.height; row++) {
     for (let col = 0; col < board.width; col++) {
       let stone = board.get([col, row]);
@@ -98,37 +96,36 @@ function save(side) {
         if (liberties.length == 1) return liberties[0];
       }
     }
-  }
+  } return [-1, -1];
 }
 
 // defend group of stones
 function defend(side) {
-  let bestMove = [-1, -1];
   for (let row = 0; row < board.height; row++) {
     for (let col = 0; col < board.width; col++) {
       let stone = board.get([col, row]);
       if (stone == side) {
         let liberties = board.getLiberties([col, row]);
-        if (liberties.length == 2) return evaluateLiberties(side, liberties, 0);
+        if (liberties.length == 3 || liberties.length == 2)
+          return evaluateLiberties(side, liberties, 0);
       }
     }
-  } return bestMove;
+  } return [-1, -1];
 }
 
 // surround group of stones
 function attack(side) {
-  let bestMove = [-1, -1];
   for (let row = 0; row < board.height; row++) {
     for (let col = 0; col < board.width; col++) {
       let stone = board.get([col, row]);
       if (side == 1 ? (stone == -1) : (stone == 1)) {
         let liberties = board.getLiberties([col, row]);
-        if (liberties.length > 1) {
+        if (liberties.length == 2) {
           let move = evaluateLiberties(side, liberties, 1);
           let takeBack = board.clone();
-          let isLegal = true;
-          
+
           // legality check
+          let isLegal = true;
           board = board.makeMove(side, move);
           if (board.get(move) == 0) isLegal = false;
           board = takeBack;
@@ -137,7 +134,7 @@ function attack(side) {
         }
       }
     }
-  } return bestMove;
+  } return [-1, -1];
 }
 
 // generate tenuki move
@@ -165,35 +162,11 @@ function tenuki(side) {
         }
       }
     }
-  }
-  //console.error('Heatmap:\n', heatmap);
-  return bestMove;
+  } return bestMove;
 }
 
 // find the best move and make it on board
-function generateMove(command) {
-  
-  /**********************************************************************\
-   
-                                 AI STRATEGY
-   
-    1. If opponent's group have only one liberty left
-       then capture it
-   
-    2. If the group of the side to move has only one liberty
-       then save it by putting a stone there unless it's a board edge
-   
-    3. If the group of the side to move has two liberties
-       then choose the the one resulting in more liberties
-   
-    4. If opponent's group have more than one liberty
-       then try to surround it
-   
-    5. Match patterns to build strong shape, if found any
-       consider that instead of chasing the group
-   
-  \**********************************************************************/
-  
+function generateMove(command) { 
   let side = command.split(' ')[1] == 'B' ? 1 : -1;
   let bestMove = [-1, -1];
 
@@ -209,26 +182,56 @@ function generateMove(command) {
   // surround group of stones
   let attackMove = attack(side);
 
-  // tenuki move
-  //let tenukiMove = tenuki(side);
+  /******************************************\
+   ==========================================
+   
+                  AI STRATEGY
   
-  if (attackMove[0] >= 0) bestMove = attackMove;
-  //else bestMove = tenukiMove;
+   ==========================================
+  \******************************************/
+  
+  // 1. If no forcing moves then tenuki
+  if (captureMove[0] == -1 &&
+      saveMove[0] == -1 &&
+      defendMove[0] == -1 &&
+      attackMove[0] == -1) {
+    let tenukiMove = tenuki(side);
+    bestMove = tenuki(side);
+    console.error('Tenuki move:', tenukiMove);
+  }
+  
+  // 2. If there's a group to capture then capture it
+  else if (captureMove[0] >= 0) bestMove = captureMove;
+  
+  // 3. If there's a group to save then save it
+  else if (saveMove[0] >= 0) bestMove = saveMove;
+  
+  // 4. If there's a group to defend then defend it
+  else if (defendMove[0] >= 0) bestMove = defendMove;
+  
+  // 5. If there's a group to surround then surround it
+  else if (attackMove[0] >= 0) bestMove = attackMove;
 
-  //console.error('Save move:', saveMove);
-  //console.error('Defend move:', defendMove);
-  //console.error('Surround move:', attackMove);
-  //console.error('Tenuki move:', tenukiMove);
-  console.error('Best move:', bestMove);
-
+  // legality check
+  let isLegal = true;
   board = board.makeMove(side, bestMove);
-  //console.error(board);
+  if (board.get(bestMove) == 0) isLegal = false;
+  
+  if (isLegal == false) {
+    console.error('Skipping illegal move')
+    board = takeBack;
+    return ''; // pass
+  }
+
+  console.error('Save move:', saveMove);
+  console.error('Defend move:', defendMove);
+  console.error('Surround move:', attackMove);
+  console.error('Best move:', bestMove);  
   return board.stringifyVertex(bestMove);
 }
 
 // play move on board
 function play(command) {
-  //if (command.split(' ')[2] == 'pass') { console.error('play: "pass" > returning...'); return; }
   let side = command.split(' ')[1];
   let color = side == 'B' ? 1 : -1;
   let coord = board.parseVertex(command.split(' ')[2]);
