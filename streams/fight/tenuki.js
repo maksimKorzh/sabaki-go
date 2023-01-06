@@ -206,14 +206,17 @@ function generateMove(command) {
   // 3. If there's a group to save then save it
   else if (saveMove[0] >= 0) bestMove = saveMove;
   
-  // 4. If there's a group to defend then defend it
+  // 4. If there's a group to surround then surround it
+  else if (attackMove[0] >= 0) bestMove = attackMove;
+  
+  // 5. If there's a group to defend then defend it
   else if (defendMove[0] >= 0) bestMove = defendMove;
   
-  // 5. If there's a group to surround then surround it
-  else if (attackMove[0] >= 0) bestMove = attackMove;
+  
 
   // legality check
   let isLegal = true;
+  let takeBack = board.clone();
   board = board.makeMove(side, bestMove);
   if (board.get(bestMove) == 0) isLegal = false;
   
